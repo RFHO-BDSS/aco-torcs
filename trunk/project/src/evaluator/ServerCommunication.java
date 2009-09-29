@@ -20,11 +20,11 @@ public class ServerCommunication{
 	private long remainingtime;
 	private int numparams;
 	private int port;
-	
+
 	public long getRemainingTime(){
 		return remainingtime;
 	}
-	
+
 	public int getParamNumber(){
 		return numparams;
 	}
@@ -32,20 +32,20 @@ public class ServerCommunication{
 	public ServerCommunication(String ip, int port){
 		//Default fitness function
 		this.fitness = new DefaultFitness();
-		
+
 		try {
 			this.socket = new DatagramSocket(clientport);
 			this.address = InetAddress.getByName(ip);
 			this.port = port;
 			socket.setSoTimeout(1000);
-			
+
 			boolean identified =false;
 			DatagramPacket packet;
 			for (int i=0; i< maxtry && !identified; i++){
 				byte[] buf = new String("info?\0").getBytes();
 				packet = new DatagramPacket(buf, buf.length, address, port);
 				socket.send(packet);
-				
+
 				buf = new byte[maxlen];
 				packet = new DatagramPacket(buf, maxlen);
 				try {
@@ -63,35 +63,37 @@ public class ServerCommunication{
 				} catch (SocketTimeoutException e1) {
 					//System.out.println("waiting...");
 				}
-				
+
 			}
-			
+
 			socket.setSoTimeout(0);
 
 		} catch (Exception e) {
+
+			socket.close();
 			e.printStackTrace();
 			System.out.println("Connection error!");
-		}		
+		}
 	}
-	
+
 	public void setFitnessFunction(FitnessFunction fitness){
 		this.fitness = fitness;
 	}
-	
+
 	public void saveBest(double[] values) throws Exception {
 		launchSimulation(values,0);
 	}
-	
+
 	public Object launchSimulation(double[] values, int time) throws Exception {
 		double fit1=0, fit2=0, fit3=0, fit4=0;
-		
+
 		if (values.length < numparams)
 			throw new Exception();
-		
+
 		remainingtime = remainingtime - time;
-		
+
 		DatagramPacket packet;
-		
+
 		//Send evalutation string
 		String params = "eval " + time;
 		for (int i=0; i<values.length; i++)
@@ -99,7 +101,7 @@ public class ServerCommunication{
 		byte[] buf = new String(params + "\0").getBytes();
 		packet = new DatagramPacket(buf, buf.length, address, port);
 		socket.send(packet);
-		
+
 		//Receive fitness
 		buf = new byte[maxlen];
 		packet = new DatagramPacket(buf, maxlen);
@@ -113,13 +115,13 @@ public class ServerCommunication{
 			fit4 = Double.parseDouble(received[4]);
 			return fitness.getFitness(fit1, fit2, fit3, fit4);
 		}
-		
+
 		if (received.length == 1 && received[0].equals("time-over"))
 			throw new TimeOverException();
-			
+
 		return null;
 	}
-	
+
 	public void close(){
 		socket.close();
 	}
